@@ -33,7 +33,7 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 	}
 	if(Compt>DETECT_LIGNEDROITE)
 	{
-		consigne_angle = (somme/Compt)*scan_in->angle_increment;// moyenne des indices par l'increment pour retrouver une consigne d'angle
+		consigne_angle = (somme/Compt-INDICE_CENTRE)*scan_in->angle_increment;// moyenne des indices par l'increment pour retrouver une consigne d'angle
 		return consigne_angle;
 	}
 
