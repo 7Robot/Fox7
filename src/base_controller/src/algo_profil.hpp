@@ -57,10 +57,14 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 		}
 
 			minDRect = ranges_i;
-			for(int j(i-INDICE_45); i<= i + INDICE_45; i++)
+			for(int j(i-INDICE_45); j<= i + INDICE_45; j++)
 			{
+				if(i==j)
+				{
+					continue;
+				}
 				float ranges_j;
-				if(DIST_MIN < scan_in->ranges[i] < DISTANCE_MAX)
+				if(DIST_MIN < scan_in->ranges[j] < DISTANCE_MAX)
 				{
 					ranges_j = scan_in->ranges[j];
 				}
