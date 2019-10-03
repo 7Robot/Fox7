@@ -18,11 +18,12 @@ float dRect(float angle)
 float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 {
 	float consigne_angle = 0; // [rad]
-	float Range_min = INDICE_CENTRE-INDICE_45;
-	float Range_max = INDICE_CENTRE + INDICE_45;
+	int Range_min = INDICE_CENTRE-INDICE_45;
+	int Range_max = INDICE_CENTRE + INDICE_45;
 	/******* recherche du cas d'étude ********/
 	int Compt(0);
 	int somme(0);
+	ROS_INFO("I'm in !");
 	for (int i( Range_min ); i<= Range_max; i++)
 	{
 		if(DIST_MIN > scan_in->ranges[i] || scan_in->ranges[i] > DISTANCE_MAX )
@@ -34,9 +35,13 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 	if(Compt>DETECT_LIGNEDROITE)
 	{
 		consigne_angle = (somme/Compt-INDICE_CENTRE)*scan_in->angle_increment;// moyenne des indices par l'increment pour retrouver une consigne d'angle
+		
+		ROS_INFO("ligne droite");
 		return consigne_angle;
 	}
 
+	
+	ROS_INFO("Virage");
 
 	/***** Recherche des min ******/
 	float maxDRect = 0;
@@ -47,6 +52,8 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 	for (int i(Range_min); i<= Range_max; i++)
 	{
 		float ranges_i;
+
+
 		if(DIST_MIN < scan_in->ranges[i] < DISTANCE_MAX)
 		{
 			ranges_i = scan_in->ranges[i];
@@ -57,10 +64,15 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 		}
 
 			minDRect = ranges_i;
-			for(int j(i-INDICE_45); i<= i + INDICE_45; i++)
+			for(int j = (i-INDICE_45); j<=( i + INDICE_45); j++)
 			{
+
+				if(i==j)
+				{
+					continue;
+				}
 				float ranges_j;
-				if(DIST_MIN < scan_in->ranges[i] < DISTANCE_MAX)
+				if(DIST_MIN < scan_in->ranges[j] < DISTANCE_MAX)
 				{
 					ranges_j = scan_in->ranges[j];
 				}

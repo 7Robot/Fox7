@@ -5,12 +5,11 @@
 #include <pigpiod_if2.h>
 #include <iostream>
 #include <cmath>
-
 #include "constantes.hpp"
 
 // Definition de l'aglorithme utilisé, choisir :
 // ALGO_RECTANGLE, ALGO_OBSTACLE ou ALGO_PROFIL
-#define ALGO_RECTANGLE
+#define ALGO_PROFIL
 
 #if defined ALGO_RECTANGLE
 	#include "algo_rectangle.hpp"
@@ -105,6 +104,8 @@ public:
 
 		if(m_run)
 		{
+			ROS_INFO("range[405]=%f",scan_in->ranges[405]);
+			ROS_INFO("cmd_angle=%f",m_consigne_angle);
 			// ALGO
 			// renvoit consigne_angle
 
@@ -113,24 +114,28 @@ public:
 			// distance devant ou celle de l'angle de consigne, a voir
 			m_dist_max=scan_in->ranges[405];
 			//m_dist_max=scan_in->ranges[405+m_consigne_angle/scan_in->angle_increment];
+
 			
 			// Arret d'urgence
-			if(scan_in->ranges[405]<DIST_URGENCE)
+		/*	if(scan_in->ranges[405]<DIST_URGENCE)
 			{
 				if(m_compteur_urgence<3)
 					++m_compteur_urgence;
 				else
 					m_arret_urgence=true;
 			}
-
+		*/
 			// commande
-			if(!m_arret_urgence)
+			//if(!m_arret_urgence||1)
+			if (1)
 			{
-				m_cmd_angle = asservDirection(m_consigne_angle, m_dt);
-				m_cmd_speed = commandSpeed(m_dist_max);
+			//	m_cmd_angle = asservDirection(m_consigne_angle, m_dt);
+			//	m_cmd_speed = commandSpeed(m_dist_max);
 
-				setDirection(m_cmd_angle);
-				setSpeed(m_cmd_speed);
+			//	setDirection(m_cmd_angle);
+			//	setSpeed(m_cmd_speed);
+				setDirection(m_consigne_angle);
+				setSpeed(0.2);
 			}
 		}
 
@@ -185,6 +190,7 @@ float commandSpeed(float dist_max)
 	else
 		speed = a*pow(dist_max,2)+b*dist_max+c;
 
+	speed=0;
 	return speed;
 }
 
@@ -195,9 +201,15 @@ void setDirection(float angle)
 		angle = CMD_ANGLE_MAX;
 	if(angle < CMD_ANGLE_MIN)
 		angle = CMD_ANGLE_MIN;
-
-	angle = angle/CMD_ANGLE_MAX * 1000 + 1500;
-	set_servo_pulsewidth(_PI, GPIO_SERVO, angle);
+	angle = (angle/CMD_ANGLE_MAX) * 500 + 1500;
+	
+	if (cmd_callback.running())
+	{
+		set_servo_pulsewidth(_PI, GPIO_SERVO, angle);
+		ROS_INFO("valeur direction=%f",angle);
+	}
+	else
+		set_servo_pulsewidth(_PI, GPIO_SERVO, 1500);
 }
 
 void setSpeed(float speed)
@@ -208,8 +220,14 @@ void setSpeed(float speed)
 	if(speed < CMD_SPEED_MIN)
 		speed = CMD_SPEED_MIN;
  	
-	speed = 1000 * speed + 1500;
-	set_servo_pulsewidth(_PI, GPIO_ESC, speed);
+	if (cmd_callback.running())
+	{
+		speed = 200 * speed + 1500;
+		set_servo_pulsewidth(_PI, GPIO_ESC, speed);
+		ROS_INFO("valeur vitesse=%f",speed);
+	}
+	else
+		set_servo_pulsewidth(_PI, GPIO_ESC, 1500);
 }
 
 void control_callback(const std_msgs::String::ConstPtr &msg)
@@ -240,16 +258,24 @@ int main(int argc, char** argv)
 		ROS_ERROR("Failed to initialize pigpiod _PI=%d", _PI);
 		return -1;
 	}
-	ROS_INFO("Pigpiod initialized _PI=%d", _PI);
+	else
+	{ROS_INFO("Pigpiod initialized _PI=%d", _PI);}
 
 	cmd_callback.initTime();
 	
 	set_mode(_PI, GPIO_SERVO, PI_OUTPUT);
 	set_mode(_PI, GPIO_ESC, PI_OUTPUT);
 
+
+	set_servo_pulsewidth(_PI, GPIO_SERVO, 1500);
+	set_servo_pulsewidth(_PI, GPIO_ESC, 1500);
+
+	sleep(1);
+
 	ros::Subscriber sub = n.subscribe("scan", 1000, &CmdCallback::callback, &cmd_callback);
 	ros::Subscriber sub2 = n.subscribe("control", 10, control_callback);
 	ros::Subscriber sub3 = n.subscribe("n", 10, n_callback);
+	
 	
 	ros::spin();
 
