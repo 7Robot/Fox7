@@ -2,8 +2,111 @@
 #include <cmath>
 #include <ros/ros.h>
 #include <laser_geometry/laser_geometry.h>
+#include <vector>
 
 #include "constantes.hpp"
+
+float traiterDist(int i, const sensor_msgs::LaserScan::ConstPtr& scan_in)
+{
+	float dist=scan_in->ranges[i];
+
+	if(dist>scan_in->range_max)
+		dist=scan_in->range_max;
+	if(dist<scan_in->range_min)
+		dist=scan_in->range_min;
+
+	if(dist>DISTANCE_MAX || dist==0)
+		dist=DISTANCE_MAX;
+
+	return dist;
+}
+
+float trouverMaxNew(const sensor_msgs::LaserScan::ConstPtr& scan_in, float* dist_max)
+{
+	float dmax;
+	float angle_max;
+	int min=(int)(INDICE_CENTRE+(ANGLE_MAX)/scan_in->angle_increment);
+	int max=(int)(INDICE_CENTRE+(ANGLE_MIN)/scan_in->angle_increment);
+	ROS_INFO("MAX=%d", max);
+	ROS_INFO("MIN=%d", min);
+		
+	int deltaimax=abs(max-min);
+	ROS_INFO("first delta=%d", deltaimax);
+
+	int imax;
+
+	float dist;
+
+	for(int i=INDICE_CENTRE+ANGLE_MIN/scan_in->angle_increment; i<INDICE_CENTRE+ANGLE_MAX/scan_in->angle_increment; i++)
+	{
+		dist=traiterDist(i, scan_in);
+		ROS_INFO("[%d] dist=%f", i,dist);
+
+		if(dist>dmax)
+		{
+			ROS_INFO("1");
+			ROS_INFO("abs=%d", abs(i-INDICE_CENTRE));
+			if(abs(i-INDICE_CENTRE)<deltaimax)
+			{
+				ROS_INFO("2");
+				// On verif si c'est pas un point unique aberant
+				if((traiterDist(i-1, scan_in)>dmax*0.95 && traiterDist(i-1, scan_in)<dmax*1.05)
+				|| (traiterDist(i+1, scan_in)>dmax*0.95 && traiterDist(i+1, scan_in)<dmax*1.05)
+				|| 1);
+				{	
+					dmax=dist;
+					deltaimax=abs(i-INDICE_CENTRE);
+					angle_max=INDICE_CENTRE+i*scan_in->angle_increment;
+					imax=i;
+				}
+			}
+		}
+	}
+
+	ROS_INFO("imax=%d", imax);
+
+	*dist_max=dmax;
+	return angle_max;
+}
+
+float trouverMax(const sensor_msgs::LaserScan::ConstPtr& scan_in, float* dist_max)
+{
+	// cherche dmax
+	float dmax=scan_in->ranges[0];
+	float dist=0;
+	for(int i=INDICE_MIN+1; i<INDICE_MAX+1; i++)
+	{
+		dist=traiterDist(i, scan_in);
+
+		// cherche max
+		if(dist>dmax)
+			dmax=dist;
+	}
+	*dist_max=dmax;
+	ROS_INFO("dmax=%f", dmax);
+
+	// on fait la moyenne sur un certain pourcentage
+	float pourcentage=0.95;
+	int imoymax=0;
+	int nbi=0;
+	for(int i=INDICE_CENTRE+ANGLE_MIN/scan_in->angle_increment; i<INDICE_CENTRE+ANGLE_MAX/scan_in->angle_increment; i++)
+	{	
+		ROS_INFO("scan[%d]=%f", i, scan_in->ranges[i]);
+		// on borne distance vu
+		dist=traiterDist(i, scan_in);
+
+		if(dist>dmax*pourcentage )
+		{
+			ROS_INFO("added");
+			imoymax+=i;
+			++nbi;
+		}
+	}
+	imoymax=imoymax/nbi;
+	ROS_INFO("imoymax=%d, nbi=%d", imoymax,nbi);
+
+	return (imoymax-INDICE_CENTRE)*scan_in->angle_increment;
+}
 
 float calculOuverture(float dmax)
 {
@@ -16,12 +119,18 @@ float calculOuverture(float dmax)
 
 float genererRectangle(float angle, float angle_ecart, float* longueur_rectangle, const sensor_msgs::LaserScan::ConstPtr& scan_in)
 {
+	//ROS_INFO("angle_ecart(deg)=%f", angle_ecart*180/PI);
+
 	//trouve dmin dans plage [angle-angle_ecart; angle+angle_ecart]
 	float dmin=scan_in->ranges[INDICE_CENTRE+(angle-angle_ecart)/scan_in->angle_increment]; // longueur_rectangle
 	for(float angle_plage=angle-angle_ecart+scan_in->angle_increment; angle_plage<angle+angle_ecart; angle_plage+=scan_in->angle_increment)
 	{
 		if(scan_in->ranges[INDICE_CENTRE+angle_plage/scan_in->angle_increment]<dmin)
-			dmin=scan_in->ranges[INDICE_CENTRE+scan_in->angle_increment];
+		{
+			//ROS_INFO("plop");
+			dmin=scan_in->ranges[INDICE_CENTRE+angle_plage/scan_in->angle_increment];
+		}
+		ROS_INFO("scan=%f\ndmin=%f", scan_in->ranges[INDICE_CENTRE+angle_plage/scan_in->angle_increment], dmin);
 	}
 	*longueur_rectangle=dmin;
 
@@ -59,66 +168,64 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 	-> on vise la direction en rectangle_angle_max
 	*/
 
-	// cherche dmax
-	float dmax=scan_in->ranges[0];
-	float dist=0;
-	for(int i=INDICE_MIN+1; i<INDICE_MAX; i++)
-	{
-		// on borne distance vu
-		dist=scan_in->ranges[i];
-		if(scan_in->ranges[i]>DISTANCE_MAX || scan_in->ranges[i]==0)
-			dist=DISTANCE_MAX;
+	// On trouve dmax et angle_max
+	float angle_moy_max;
+	float dmax;
 
-		// cherche max
-		if(dist>dmax)
-			dmax=dist;
-	}
-
-	// on fait la moyenne sur un certain pourcentage
-	int pourcentage=95;
-	int imoymax=0;
-	int nbi=0;
-	for(int i=INDICE_MIN; i<INDICE_MAX; i++)
-	{
-		if(scan_in->ranges[i]>dmax*pourcentage/100)
-		{
-			imoymax+=i;
-			++nbi;
-		}
-	}
-	imoymax=imoymax/nbi;
-	float angle_moy_max=(INDICE_CENTRE-imoymax)*scan_in->angle_increment;
+	angle_moy_max=trouverMax(scan_in, &dmax);
+	//angle_moy_max=trouverMaxNew(scan_in, &dmax);
+	ROS_INFO("angle_moy_max=%f dmax=%f", angle_moy_max, dmax);
 
 	// Determine angle d'ouverture
 	float angle_ouverture=calculOuverture(dmax);
+	//ROS_INFO("angle_ouverture=%f", angle_ouverture);
 
 	// Pour chaque angle dans l'ouverture on trouve le rectangle associé dans le but de trouver le rectangle le plus long
-	float angle_ecart=scan_in->angle_increment;
-	float angle_rectangle_max=-angle_ouverture;
+	float angle_ecart;
 	float largeur_rectangle=0;
 	float longueur_rectangle=0;
 	float longueur_rectangle_max=0;
-	for(float angle=angle_moy_max-angle_ouverture; angle<angle_moy_max+angle_ouverture; angle+=scan_in->angle_increment)
+	std::vector<float> angle_moy_rectangle;
+	for(float angle=angle_moy_max-angle_ouverture; angle<angle_moy_max+angle_ouverture; angle+=2*scan_in->angle_increment)
 	{
+		ROS_INFO("angle_boucle=%f", angle);
 		// generer 1er rectangle
+		angle_ecart=scan_in->angle_increment;
 		largeur_rectangle=genererRectangle(angle, angle_ecart, &longueur_rectangle, scan_in);
+		//ROS_INFO("largeur_1er_rectangle=%f", largeur_rectangle);
+
 		// on continue de l'agrandir jusqu'a ce que sa largeur depasse celle de la voiture
-		while(largeur_rectangle<LARGEUR_VOITURE)
+		while(largeur_rectangle<LARGEUR_VOITURE && angle_ecart<=85*PI/180 && angle_ecart>=-85*PI/180)
 		{
 			angle_ecart+=scan_in->angle_increment;
 			largeur_rectangle=genererRectangle(angle, angle_ecart, &longueur_rectangle, scan_in);
 		}
+		ROS_INFO("longueur_rectangle=%f", longueur_rectangle);
+		ROS_INFO("largeur_rectangle=%f", largeur_rectangle);
+		ROS_INFO("fin boucle");
+
+		if(longueur_rectangle>=longueur_rectangle_max*0.95 && longueur_rectangle<=longueur_rectangle_max)
+		{
+			ROS_INFO("add size=%d", (int)angle_moy_rectangle.size());
+			angle_moy_rectangle.push_back(angle);
+		}
 
 		// on verif si on a trouve le plus long jusque la
-		if(longueur_rectangle>longueur_rectangle_max)
+		else if(longueur_rectangle>longueur_rectangle_max)
 		{
 			longueur_rectangle_max=longueur_rectangle;
-			angle_rectangle_max=angle;
+			angle_moy_rectangle.clear();
+			angle_moy_rectangle.push_back(angle);
+			ROS_INFO("found max");
 		}
 	}
 
 	// on a maintenant la direction a viser
-	consigne_angle=angle_rectangle_max;
+	ROS_INFO("size=%d", (int)angle_moy_rectangle.size());
+	for(int i=0; i<angle_moy_rectangle.size(); i++)
+		consigne_angle+=angle_moy_rectangle[i];
+	consigne_angle=consigne_angle/angle_moy_rectangle.size();
+	ROS_INFO("consigne_angle=%f", consigne_angle);
 
 	return consigne_angle;
 }
