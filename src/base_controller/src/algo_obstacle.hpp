@@ -36,7 +36,7 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 		angle_check+=a_increment;
 		distance=scan_in->ranges[i];
 
-		if (distance<scan_in->range_max)&&(distance>scan_in->range_min)
+		if ((distance>0.17)&&(distance<5))
 		{
 			if (angle_check<PI/2)
 			{
@@ -83,6 +83,10 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 		}
 	}
 	
+
+	consigne_angle=-1*consigne_angle;
+
+
 	return consigne_angle;
 }
 

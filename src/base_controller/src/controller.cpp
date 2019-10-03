@@ -9,7 +9,7 @@
 
 // Definition de l'aglorithme utilisé, choisir :
 // ALGO_RECTANGLE, ALGO_OBSTACLE ou ALGO_PROFIL
-#define ALGO_PROFIL
+#define ALGO_OBSTACLE
 
 #if defined ALGO_RECTANGLE
 	#include "algo_rectangle.hpp"
