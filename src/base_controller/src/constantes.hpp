@@ -20,7 +20,7 @@
 #define CMD_SPEED_MAX 1
 #define CMD_SPEED_MIN 0.0 // Garder positive ! ou changer commandSpeed
 
-#define LARGEUR_VOITURE 0.17 // 0.15 + marge securite
+#define LARGEUR_VOITURE 0.35 // 0.15 + marge securite
 
 #define DISTANCE_MAX 5
 #define DISTANCE_MIN 0.4

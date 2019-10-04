@@ -7,12 +7,14 @@
 
 #define INDICE_45 136
 #define DIST_MIN 0.1
+#define DIST_MAX 3
 #define DETECT_LIGNEDROITE 50
 
+float marge_erreur(1.5);
 
 float dRect(float angle)
 {
-	return (LARGEUR_VOITURE/2/sin(angle));
+	return (LARGEUR_VOITURE*marge_erreur/2/sin(angle));
 }
 
 float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
@@ -23,10 +25,10 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 	/******* recherche du cas d'étude ********/
 	int Compt(0);
 	int somme(0);
-	ROS_INFO("I'm in !");
+	//ROS_INFO("I'm in !");
 	for (int i( Range_min ); i<= Range_max; i++)
 	{
-		if(DIST_MIN > scan_in->ranges[i] || scan_in->ranges[i] > DISTANCE_MAX )
+		if(scan_in->ranges[i]==0 || scan_in->ranges[i] > DIST_MAX )
 		{
 			Compt++;
 			somme += i;
@@ -54,13 +56,13 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 		float ranges_i;
 
 
-		if(DIST_MIN < scan_in->ranges[i] < DISTANCE_MAX)
+		if(scan_in->ranges[i] > DIST_MAX || scan_in->ranges[i]==0)
 		{
-			ranges_i = scan_in->ranges[i];
+			ranges_i = DISTANCE_MAX;
 		}
 		else
 		{
-			ranges_i = DISTANCE_MAX;
+			ranges_i = scan_in->ranges[i];
 		}
 
 			minDRect = ranges_i;
@@ -71,13 +73,13 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 					continue;
 				}
 				float ranges_j;
-				if(DIST_MIN < scan_in->ranges[j] < DISTANCE_MAX)
+				if(scan_in->ranges[j] > DISTANCE_MAX || scan_in->ranges[j] == 0)
 				{
-					ranges_j = scan_in->ranges[j];
+					ranges_j = DISTANCE_MAX;
 				}
 				else
 				{
-					ranges_j = DISTANCE_MAX;
+					ranges_j = scan_in->ranges[j];
 				}
 
 				//theta = fabs(i-j)*scan_in->angle_increment);

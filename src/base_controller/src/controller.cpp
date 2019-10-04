@@ -32,7 +32,7 @@ void setSpeed(float speed);
 int _PI;
 
 // pour debug
-int n=0;
+int n=405;
 
 // Coef d'asserv en direction
 float Kp=1;
@@ -102,8 +102,8 @@ public:
 		m_dt=ros::Time::now()-m_last_call;
 		m_last_call=ros::Time::now();
 
-		if(m_run)
-		{
+		//if(m_run)
+		//{
 			ROS_INFO("range[405]=%f",scan_in->ranges[405]);
 			ROS_INFO("cmd_angle=%f",m_consigne_angle);
 			// ALGO
@@ -127,20 +127,23 @@ public:
 		*/
 			// commande
 			//if(!m_arret_urgence||1)
-			if (1)
-			{
+		//	if (1)
+		//	{
 			//	m_cmd_angle = asservDirection(m_consigne_angle, m_dt);
 			//	m_cmd_speed = commandSpeed(m_dist_max);
 
 			//	setDirection(m_cmd_angle);
 			//	setSpeed(m_cmd_speed);
-				setDirection(m_consigne_angle);
-				setSpeed(0.2);
-			}
-		}
-
-		else
-			ROS_INFO("ranges[%d]=%f", n, scan_in->ranges[n]);
+		//		setDirection(m_consigne_angle);
+		//		setSpeed(0.2);
+		//	}
+		//}
+		//else
+		//{
+		//	ROS_INFO("ranges[%d]=%f", n, scan_in->ranges[n]);
+		//}
+		setDirection(m_consigne_angle);
+		setSpeed(0.25);
 	}
 
 	void runON() {m_run=true;}
@@ -157,6 +160,7 @@ public:
 		m_compteur_urgence=0;
 		asservDirection.reset();
 	}
+
 
 
 private:
@@ -190,7 +194,6 @@ float commandSpeed(float dist_max)
 	else
 		speed = a*pow(dist_max,2)+b*dist_max+c;
 
-	speed=0;
 	return speed;
 }
 
@@ -203,13 +206,8 @@ void setDirection(float angle)
 		angle = CMD_ANGLE_MIN;
 	angle = (angle/CMD_ANGLE_MAX) * 500 + 1500;
 	
-	if (cmd_callback.running())
-	{
-		set_servo_pulsewidth(_PI, GPIO_SERVO, angle);
-		ROS_INFO("valeur direction=%f",angle);
-	}
-	else
-		set_servo_pulsewidth(_PI, GPIO_SERVO, 1500);
+	set_servo_pulsewidth(_PI, GPIO_SERVO, angle);
+	ROS_INFO("valeur direction=%f",angle);
 }
 
 void setSpeed(float speed)

@@ -36,8 +36,6 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 		angle_check+=a_increment;
 		distance=scan_in->ranges[i];
 
-		if ((distance>0.17)&&(distance<5))
-		{
 			if (angle_check<PI/2)
 			{
 				x=cos(angle_check)*distance;
@@ -49,12 +47,12 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 					{
 						//ya un obstacle
 						//on calcul l angle pour esquiver
-						ROS_INFO("YA UN OBSTACLE A DROITE");
 						float esquive=atan((LARGEUR_VOITURE/2-x)/y);
 					
 						if (abs(esquive)>abs(consigne_angle))
 						{
 							consigne_angle=esquive;
+							ROS_INFO("A DROITE ESQUIVE=%f",esquive);
 						}				
 					}
 				}
@@ -70,23 +68,18 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 					{
 						//ya un obstacle
 						//on calcul l angle pour esquiver
-						ROS_INFO("YA UN OBSTACLE A GAUCHE");
 						float esquive=-atan((LARGEUR_VOITURE/2-x)/y);
 					
 						if (abs(esquive)>abs(consigne_angle))
 						{
 							consigne_angle=esquive;
+							ROS_INFO("A GAUCHE ESQUIVE=%f",esquive);
 						}				
 					}
 				}
 			}
-		}
 	}
 	
-
-	consigne_angle=-1*consigne_angle;
-
-
-	return consigne_angle;
+	return -consigne_angle;
 }
 
