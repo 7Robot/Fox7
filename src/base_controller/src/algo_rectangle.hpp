@@ -3,10 +3,10 @@
 #include <ros/ros.h>
 #include <laser_geometry/laser_geometry.h>
 #include <vector>
-#include <deque>
 
 #include "constantes.hpp"
 
+#define DIST_MAX 2.0
 #define Y_MIN 0.15
 #define PAS 0.01
 #define PAS_ANGLE 4 // 4*scan_in->angle_increment
@@ -20,8 +20,8 @@ float traiterDist(int i, const sensor_msgs::LaserScan::ConstPtr& scan_in)
 	if(dist<scan_in->range_min)
 		dist=scan_in->range_min;
 
-	if(dist>DISTANCE_MAX || dist==0)
-		dist=DISTANCE_MAX;
+	if(dist>DIST_MAX || dist==0)
+		dist=DIST_MAX;
 
 	return dist;
 }
@@ -29,31 +29,37 @@ float traiterDist(int i, const sensor_msgs::LaserScan::ConstPtr& scan_in)
 float trouverMax(const sensor_msgs::LaserScan::ConstPtr& scan_in, float* dist_max)
 {
 	float dist;
-	std::deque<float> liste;
-	liste.push_back(0);
+	std::vector<float> liste_dist;
+	std::vector<float> liste_indice;
+	liste_dist.push_back(0);
 	for(int i=INDICE_CENTRE+ANGLE_MIN/scan_in->angle_increment; i<INDICE_CENTRE+ANGLE_MAX/scan_in->angle_increment; i++)
 	{
 		dist=traiterDist(i, scan_in);
-		if(dist>liste.back())
+		if(dist>=liste_dist.back())
 		{
-			liste.push_back(dist);
-			if(liste.front()<0.95*liste.back())
-				liste.pop_front();
+			if(liste_dist.front()<0.95*dist)
+			{
+				liste_dist.clear();
+				liste_indice.clear();
+			}
+
+			liste_dist.push_back(dist);
+			liste_indice.push_back(i);
 		}
 	}
-	float dist_moy, angle_moy;
-	for(int i=0; i< liste.size(); i++)
+	float dist_moy=0, angle_moy=0;
+	for(int i=0; i<liste_dist.size(); i++)
 	{
-		dist_moy+=liste[i];
-		angle_moy+=i;
-	}		
-	dist_moy=dist_moy/liste.size();
-	angle_moy=(angle_moy/liste.size()-INDICE_CENTRE)*scan_in->angle_increment;
+		dist_moy+=liste_dist[i];
+		angle_moy+=liste_indice[i];
+	}	
+	dist_moy=dist_moy/liste_dist.size();
+
+	angle_moy=(angle_moy/liste_indice.size()-INDICE_CENTRE)*scan_in->angle_increment;
 
 	*dist_max=dist_moy;
 	return angle_moy;
 }
-
 
 float calculOuverture(float dmax)
 {
@@ -77,12 +83,12 @@ float genererRectangle(float angle_max, float dmax, const sensor_msgs::LaserScan
 	// Ligne gauche //
 	//////////////////
 	obstacle=false;
-	for(float y=Y_MIN; y<dmax && !obstacle; y+=PAS)
+	for(float y=Y_MIN; y<0.9*dmax && !obstacle; y+=PAS)
 	{
 		beta=atan(y/x);
 		h=y/sin(beta);
 
-		if(traiterDist(INDICE_CENTRE+(angle_max+beta-PI/2)/scan_in->angle_increment, scan_in) <= h)
+		if(traiterDist(INDICE_CENTRE+(angle_max-beta+PI/2)/scan_in->angle_increment, scan_in) <= h)
 		{
 			obstacle=true;
 			ygmin=y;
@@ -96,7 +102,7 @@ float genererRectangle(float angle_max, float dmax, const sensor_msgs::LaserScan
 	// Ligne droite //
 	//////////////////
 	obstacle=false;		
-	for(float y=Y_MIN; y<dmax && !obstacle; y+=PAS)
+	for(float y=Y_MIN; y<0.9*dmax && !obstacle; y+=PAS)
 	{
 		beta=atan(y/x);
 		h=y/sin(beta);
@@ -127,26 +133,31 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 	float angle_ouverture=calculOuverture(dmax);
 
 	// Pour chaque angle dans l'ouverture on trouve le rectangle associé dans le but de trouver le rectangle le plus long
-	std::deque<float> liste;
-	liste.push_back(0);
+	std::vector<float> liste_long;
+	std::vector<float> liste_angle;
+	liste_long.push_back(0);
 	float longueur_rectangle=0;
 	for(float angle=angle_dmax-angle_ouverture; angle<angle_dmax+angle_ouverture; angle+=PAS_ANGLE*scan_in->angle_increment)
 	{
-		//ROS_INFO("angle_boucle=%f", angle);
 		longueur_rectangle=genererRectangle(angle, dmax, scan_in);
 
-		if(longueur_rectangle>liste.back())
+		if(longueur_rectangle>=liste_long.back())
 		{
-			liste.push_back(longueur_rectangle);
-			if(liste.front()<0.95*liste.back())
-				liste.pop_front();
+			if(liste_long.front()<0.95*longueur_rectangle)
+			{
+				liste_long.clear();
+				liste_angle.clear();
+			}
+			liste_long.push_back(longueur_rectangle);
+			liste_angle.push_back(angle);
 		}
 	}
 
 	// on a maintenant la direction a viser
-	for(int i=0; liste.size(); i++)
-		consigne_angle+=liste[i];
-	consigne_angle=(consigne_angle/liste.size()-INDICE_CENTRE)*scan_in->angle_increment;
+	for(int i=0; i<liste_angle.size(); i++)
+		consigne_angle+=liste_angle[i];
+	consigne_angle=consigne_angle/liste_angle.size();
+
 
 	return consigne_angle;
 }
