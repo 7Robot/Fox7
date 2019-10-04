@@ -7,6 +7,9 @@
 #include <cmath>
 #include "constantes.hpp"
 
+#define VITESSE_MAXIMUM 0.8
+#define VITESSE_MINIMUM 0.5
+
 // Definition de l'aglorithme utilisé, choisir :
 // ALGO_RECTANGLE, ALGO_OBSTACLE ou ALGO_PROFIL
 #define ALGO_PROFIL
@@ -104,15 +107,15 @@ public:
 
 		//if(m_run)
 		//{
-			ROS_INFO("range[405]=%f",scan_in->ranges[405]);
-			ROS_INFO("cmd_angle=%f",m_consigne_angle);
+			//ROS_INFO("range[405]=%f",scan_in->ranges[405]);
+			//ROS_INFO("cmd_angle=%f",m_consigne_angle);
 			// ALGO
 			// renvoit consigne_angle
 
 			m_consigne_angle=commandDirection(scan_in);
 
 			// distance devant ou celle de l'angle de consigne, a voir
-			m_dist_max=scan_in->ranges[405];
+			//m_dist_max=scan_in->ranges[405];
 			//m_dist_max=scan_in->ranges[405+m_consigne_angle/scan_in->angle_increment];
 
 			
@@ -143,7 +146,13 @@ public:
 		//	ROS_INFO("ranges[%d]=%f", n, scan_in->ranges[n]);
 		//}
 		setDirection(m_consigne_angle);
-		setSpeed(0.35);
+		
+		float vitesse_actuelle;
+		
+		vitesse_actuelle=VITESSE_MAXIMUM-(abs(m_consigne_angle)/CMD_ANGLE_MAX)*(VITESSE_MAXIMUM-VITESSE_MINIMUM);
+		ROS_INFO("Vitesse = %f",vitesse_actuelle);
+
+		setSpeed(vitesse_actuelle);
 	}
 
 	void runON() {m_run=true;}
@@ -207,7 +216,7 @@ void setDirection(float angle)
 	angle = (angle/CMD_ANGLE_MAX) * 500 + 1500;
 	
 	set_servo_pulsewidth(_PI, GPIO_SERVO, angle);
-	ROS_INFO("valeur direction=%f",angle);
+	//ROS_INFO("valeur direction=%f",angle);
 }
 
 void setSpeed(float speed)
@@ -222,7 +231,7 @@ void setSpeed(float speed)
 	{
 		speed = 200 * speed + 1500;
 		set_servo_pulsewidth(_PI, GPIO_ESC, speed);
-		ROS_INFO("valeur vitesse=%f",speed);
+		//ROS_INFO("valeur vitesse=%f",speed);
 	}
 	else
 		set_servo_pulsewidth(_PI, GPIO_ESC, 1500);

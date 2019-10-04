@@ -72,6 +72,11 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 				{
 					continue;
 				}
+
+
+				// On normalise entre la dist max et la dist min 
+
+
 				float ranges_j;
 				if(scan_in->ranges[j] > DISTANCE_MAX || scan_in->ranges[j] == 0)
 				{
@@ -82,7 +87,7 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 					ranges_j = scan_in->ranges[j];
 				}
 
-				//theta = fabs(i-j)*scan_in->angle_increment);
+				// On regarde la projection du robot dans la direction 
 				if(ranges_j < dRect(fabs(i-j)*scan_in->angle_increment))
 				{
 					if(minDRect>ranges_j)
