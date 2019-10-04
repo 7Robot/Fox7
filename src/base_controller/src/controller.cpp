@@ -9,7 +9,7 @@
 
 // Definition de l'aglorithme utilisé, choisir :
 // ALGO_RECTANGLE, ALGO_OBSTACLE ou ALGO_PROFIL
-#define ALGO_OBSTACLE
+#define ALGO_PROFIL
 
 #if defined ALGO_RECTANGLE
 	#include "algo_rectangle.hpp"
@@ -143,7 +143,7 @@ public:
 		//	ROS_INFO("ranges[%d]=%f", n, scan_in->ranges[n]);
 		//}
 		setDirection(m_consigne_angle);
-		setSpeed(0.25);
+		setSpeed(0.35);
 	}
 
 	void runON() {m_run=true;}

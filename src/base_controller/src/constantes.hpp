@@ -22,7 +22,7 @@
 
 #define LARGEUR_VOITURE 0.35 // 0.15 + marge securite
 
-#define DISTANCE_MAX 5
+#define DISTANCE_MAX 2
 #define DISTANCE_MIN 0.4
 #define DIST_URGENCE 0.2
 

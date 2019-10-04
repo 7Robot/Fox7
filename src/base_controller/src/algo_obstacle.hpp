@@ -5,7 +5,7 @@
 
 #include "constantes.hpp"
 
-#define DISTANCE_SECURITE 0.40
+#define DISTANCE_SECURITE 3
 
 float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 {
@@ -36,12 +36,19 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 		angle_check+=a_increment;
 		distance=scan_in->ranges[i];
 
-			if (angle_check<PI/2)
+			if ((distance==0)||(distance>DISTANCE_MAX))
+			{
+				ROS_INFO("il y a des mauvais points");
+			}
+
+
+			
+			else if (angle_check<PI/2)
 			{
 				x=cos(angle_check)*distance;
 				y=sin(angle_check)*distance;
 
-				if (((-1*LARGEUR_VOITURE)/2<x)&&(x<(1*LARGEUR_VOITURE)/2))
+				if ((0<x)&&(x<(LARGEUR_VOITURE)/2))
 				{
 					if ((0<y)&&(y<DISTANCE_SECURITE))
 					{
@@ -62,7 +69,7 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 				x=cos(PI-angle_check)*distance;
 				y=sin(PI-angle_check)*distance;
 
-				if (((-1*LARGEUR_VOITURE)/2<x)&&(x<(1*LARGEUR_VOITURE)/2))
+				if ((0<x)&&(x<(1*LARGEUR_VOITURE)/2))
 				{
 					if ((0<y)&&(y<DISTANCE_SECURITE))
 					{
@@ -80,6 +87,6 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 			}
 	}
 	
-	return -consigne_angle;
+	return consigne_angle;
 }
 
