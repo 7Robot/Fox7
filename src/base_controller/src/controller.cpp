@@ -59,7 +59,8 @@ const float b=2*DISTANCE_MAX*(CMD_SPEED_MAX-CMD_SPEED_MIN)/(pow(DISTANCE_MAX-DIS
 const float c=(CMD_SPEED_MIN*pow(DISTANCE_MAX,2)-2*DISTANCE_MAX*DISTANCE_MIN*CMD_SPEED_MAX+pow(DISTANCE_MIN,2)*CMD_SPEED_MAX)/(pow(DISTANCE_MAX-DISTANCE_MIN,2));
 
 #if defined K2000
-const unsigned int K2000_pins[6] = {5,6,13,19,26, 12};
+
+/*const unsigned int K2000_pins[6] = {5,6,13,19,26, 12};
 const int K2000_freq = 10;
 const int K2000_cycle = 10;
 
@@ -74,6 +75,30 @@ void K2000_set_pins(const int pattern[5])
 	{
 		gpio_write(_PI, K2000_pins[i],pattern[i]);
 	}
+}
+
+void K2000_update()
+{
+	static int freq_counter = 0;
+	static int cycle_counter = 0;
+	
+	freq_counter = (freq_counter+1)%K2000_freq;
+	if(freq_counter == 0)
+	{
+		K2000_set_pins(K2000_pattern[cycle_counter]);
+		cycle_counter = (cycle_counter+1)%K2000_cycle;
+	}
+}*/
+
+const unsigned int K2000_pins=12;
+const int K2000_freq = 10;
+const int K2000_cycle = 10;
+
+const int K2000_pattern[K2000_cycle] = {1,1,0,0,1, 1,0,0,1,0};
+
+void K2000_set_pins(const int pattern)
+{
+	gpio_write(_PI, K2000_pins, pattern);
 }
 
 void K2000_update()
@@ -358,8 +383,7 @@ int main(int argc, char** argv)
 	set_mode(_PI, GPIO_ESC, PI_OUTPUT);
 	
 	#if defined K2000
-	for(int i(0);i<5;i++){
-	set_mode(_PI, K2000_pins[i], PI_OUTPUT);}
+	set_mode(_PI, K2000_pins, PI_OUTPUT);
 	#endif
 
 	set_servo_pulsewidth(_PI, GPIO_SERVO, 1500);
