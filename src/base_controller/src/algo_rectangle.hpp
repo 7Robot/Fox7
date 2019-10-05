@@ -6,7 +6,7 @@
 
 #include "constantes.hpp"
 
-#define DIST_MAX 2.0
+#define DIST_MAX 6.0
 #define Y_MIN 0.15
 #define PAS 0.01
 #define PAS_ANGLE 4 // 4*scan_in->angle_increment
@@ -26,7 +26,7 @@ float traiterDist(int i, const sensor_msgs::LaserScan::ConstPtr& scan_in)
 	return dist;
 }
 
-float trouverMax(const sensor_msgs::LaserScan::ConstPtr& scan_in, float* dist_max)
+float trouverMax(const sensor_msgs::LaserScan::ConstPtr& scan_in, float* dist_max, float angle_min_ignore, float angle_max_ignore)
 {
 	float dist;
 	std::vector<float> liste_dist;
@@ -35,16 +35,21 @@ float trouverMax(const sensor_msgs::LaserScan::ConstPtr& scan_in, float* dist_ma
 	for(int i=INDICE_CENTRE+ANGLE_MIN/scan_in->angle_increment; i<INDICE_CENTRE+ANGLE_MAX/scan_in->angle_increment; i++)
 	{
 		dist=traiterDist(i, scan_in);
-		if(dist>=liste_dist.back())
+		ROS_INFO("indice_trouver=%d dist=%f", i, dist);
+		if((i-INDICE_CENTRE)*scan_in->angle_increment<angle_min_ignore || (i-INDICE_CENTRE)*scan_in->angle_increment>angle_max_ignore)
 		{
-			if(liste_dist.front()<0.95*dist)
+			if(dist>=liste_dist.back())
 			{
-				liste_dist.clear();
-				liste_indice.clear();
-			}
+				if(liste_dist.front()<0.95*dist)
+				{
+					liste_dist.clear();
+					liste_indice.clear();
+				}
 
-			liste_dist.push_back(dist);
-			liste_indice.push_back(i);
+				ROS_INFO("added");
+				liste_dist.push_back(dist);
+				liste_indice.push_back(i);
+			}
 		}
 	}
 	float dist_moy=0, angle_moy=0;
@@ -65,7 +70,7 @@ float calculOuverture(float dmax)
 {
 	float ouverture;
 	// a dvp evidemment
-	ouverture=30*PI/180;
+	ouverture=10*PI/180;
 
 	return ouverture;
 }
@@ -77,7 +82,7 @@ float genererRectangle(float angle_max, float dmax, const sensor_msgs::LaserScan
 	bool obstacle;
 
 	float beta, h;
-	float x=1.2*LARGEUR_VOITURE/2;
+	float x=1.5*LARGEUR_VOITURE/2;
 	
 	//////////////////
 	// Ligne gauche //
@@ -124,40 +129,71 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 {
 	float consigne_angle=0; // [rad]
 
-	// On trouve dmax et angle_max
-	float angle_dmax;
-	float dmax;
-	angle_dmax=trouverMax(scan_in, &dmax);
+	float angle_min_ignore=0;
+	float angle_max_ignore=0;
 
-	// Determine angle d'ouverture
-	float angle_ouverture=calculOuverture(dmax);
-
-	// Pour chaque angle dans l'ouverture on trouve le rectangle associé dans le but de trouver le rectangle le plus long
-	std::vector<float> liste_long;
-	std::vector<float> liste_angle;
-	liste_long.push_back(0);
-	float longueur_rectangle=0;
-	for(float angle=angle_dmax-angle_ouverture; angle<angle_dmax+angle_ouverture; angle+=PAS_ANGLE*scan_in->angle_increment)
+	bool pranked=false;
+	bool prank=true;
+	while(prank && !pranked)
 	{
-		longueur_rectangle=genererRectangle(angle, dmax, scan_in);
+		pranked=true;
+		prank=false;
+		// On trouve dmax et angle_max
+		float angle_dmax;
+		float dmax;
+		angle_dmax=trouverMax(scan_in, &dmax, angle_min_ignore, angle_max_ignore);
+		ROS_INFO("angle_max=%f", angle_dmax);
 
-		if(longueur_rectangle>=liste_long.back())
+		// Determine angle d'ouverture
+		float angle_ouverture=calculOuverture(dmax);
+
+		// Pour chaque angle dans l'ouverture on trouve le rectangle associé dans le but de trouver le rectangle le plus long
+		std::vector<float> liste_long;
+		std::vector<float> liste_angle;
+		liste_long.push_back(0);
+		float longueur_rectangle=0;
+		for(float angle=angle_dmax-angle_ouverture; angle<angle_dmax+angle_ouverture; angle+=PAS_ANGLE*scan_in->angle_increment)
 		{
-			if(liste_long.front()<0.95*longueur_rectangle)
+			longueur_rectangle=genererRectangle(angle, dmax, scan_in);
+
+			if(longueur_rectangle>=liste_long.back())
 			{
-				liste_long.clear();
-				liste_angle.clear();
+				if(liste_long.front()<0.95*longueur_rectangle)
+				{
+					liste_long.clear();
+					liste_angle.clear();
+				}
+				liste_long.push_back(longueur_rectangle);
+				liste_angle.push_back(angle);
 			}
-			liste_long.push_back(longueur_rectangle);
-			liste_angle.push_back(angle);
+		}
+
+		// on a maintenant la direction a viser
+		longueur_rectangle=0;
+		for(int i=0; i<liste_angle.size(); i++)
+		{
+			consigne_angle+=liste_angle[i];
+			longueur_rectangle+=liste_long[i];
+		}
+		consigne_angle=consigne_angle/liste_angle.size();
+		longueur_rectangle=longueur_rectangle/liste_long.size();
+
+		ROS_INFO("consigne=%f", consigne_angle);
+
+
+		ROS_INFO("longueur=%f dmax=%f", longueur_rectangle, dmax);
+		if(longueur_rectangle<dmax*0.5)
+		{
+			angle_min_ignore=angle_dmax-angle_ouverture;
+			angle_max_ignore=angle_dmax+angle_ouverture;
+			prank=true;
+
+			ROS_INFO("min=%f max=%f", angle_min_ignore, angle_max_ignore);
+			ROS_INFO("Pranked");
 		}
 	}
 
-	// on a maintenant la direction a viser
-	for(int i=0; i<liste_angle.size(); i++)
-		consigne_angle+=liste_angle[i];
-	consigne_angle=consigne_angle/liste_angle.size();
-
+	ROS_INFO("fin");
 
 	return consigne_angle;
 }
