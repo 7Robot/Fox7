@@ -26,7 +26,7 @@
 	#include "algo_profil.hpp"
 #endif
 
-//#define K2000
+#define K2000
 
 // LIDAR
 // ranges[0] -> ranges[810]
@@ -59,16 +59,16 @@ const float b=2*DISTANCE_MAX*(CMD_SPEED_MAX-CMD_SPEED_MIN)/(pow(DISTANCE_MAX-DIS
 const float c=(CMD_SPEED_MIN*pow(DISTANCE_MAX,2)-2*DISTANCE_MAX*DISTANCE_MIN*CMD_SPEED_MAX+pow(DISTANCE_MIN,2)*CMD_SPEED_MAX)/(pow(DISTANCE_MAX-DISTANCE_MIN,2));
 
 #if defined K2000
-const unsigned int K2000_pins[5] = {5,6,13,12,26};
+const unsigned int K2000_pins[6] = {5,6,13,19,26, 12};
 const int K2000_freq = 10;
 const int K2000_cycle = 10;
 
-const int K2000_pattern[K2000_cycle][5] = {
-	{1,0,0,0,0},{1,1,0,0,0},{0,1,1,0,0},{0,0,1,1,0},{0,0,0,1,1},
-	{0,0,0,0,1},{0,0,0,1,1},{0,0,1,1,0},{0,1,1,0,0},{1,1,0,0,0}
-}
+const int K2000_pattern[K2000_cycle][6] = {
+	{1,0,0,0,0, 0},{1,1,0,0,0, 1},{0,1,1,0,0, 0},{0,0,1,1,0, 0},{0,0,0,1,1, 1},
+	{0,0,0,0,1, 1},{0,0,0,1,1, 0},{0,0,1,1,0, 0},{0,1,1,0,0, 1},{1,1,0,0,0, 0}
+};
 
-void K2000_set_pins(int pattern[5])
+void K2000_set_pins(const int pattern[5])
 {
 	for(int i(0);i<5;i++)
 	{
@@ -81,11 +81,10 @@ void K2000_update()
 	static int freq_counter = 0;
 	static int cycle_counter = 0;
 	
-	K2000_set_pins(K2000_pattern[cycle_counter]);
-	
 	freq_counter = (freq_counter+1)%K2000_freq;
 	if(freq_counter == 0)
 	{
+		K2000_set_pins(K2000_pattern[cycle_counter]);
 		cycle_counter = (cycle_counter+1)%K2000_cycle;
 	}
 }
@@ -151,7 +150,7 @@ public:
 		m_last_call=ros::Time::now();
 		
 		#if defined K2000
-		K2000_update()
+		K2000_update();
 		#endif
 		
 		//if(m_run)
