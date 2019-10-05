@@ -26,6 +26,8 @@
 	#include "algo_profil.hpp"
 #endif
 
+//#define K2000
+
 // LIDAR
 // ranges[0] -> ranges[810]
 // centre 405
@@ -55,6 +57,40 @@ float Vmax=0.5;
 const float a=(CMD_SPEED_MIN-CMD_SPEED_MAX)/(pow(DISTANCE_MAX-DISTANCE_MIN,2));
 const float b=2*DISTANCE_MAX*(CMD_SPEED_MAX-CMD_SPEED_MIN)/(pow(DISTANCE_MAX-DISTANCE_MIN,2));
 const float c=(CMD_SPEED_MIN*pow(DISTANCE_MAX,2)-2*DISTANCE_MAX*DISTANCE_MIN*CMD_SPEED_MAX+pow(DISTANCE_MIN,2)*CMD_SPEED_MAX)/(pow(DISTANCE_MAX-DISTANCE_MIN,2));
+
+#if defined K2000
+const unsigned int K2000_pins[5] = {5,6,13,12,26};
+const int K2000_freq = 10;
+const int K2000_cycle = 10;
+
+const int K2000_pattern[K2000_cycle][5] = {
+	{1,0,0,0,0},{1,1,0,0,0},{0,1,1,0,0},{0,0,1,1,0},{0,0,0,1,1},
+	{0,0,0,0,1},{0,0,0,1,1},{0,0,1,1,0},{0,1,1,0,0},{1,1,0,0,0}
+}
+
+void K2000_set_pins(int pattern[5])
+{
+	for(int i(0);i<5;i++)
+	{
+		gpio_write(_PI, K2000_pins[i],pattern[i]);
+	}
+}
+
+void K2000_update()
+{
+	static int freq_counter = 0;
+	static int cycle_counter = 0;
+	
+	K2000_set_pins(K2000_pattern[cycle_counter]);
+	
+	freq_counter = (freq_counter+1)%K2000_freq;
+	if(freq_counter == 0)
+	{
+		cycle_counter = (cycle_counter+1)%K2000_cycle;
+	}
+}
+
+#endif
 
 class AsservDirection
 {
@@ -113,7 +149,11 @@ public:
 	{
 		m_dt=ros::Time::now()-m_last_call;
 		m_last_call=ros::Time::now();
-
+		
+		#if defined K2000
+		K2000_update()
+		#endif
+		
 		//if(m_run)
 		//{
 			//ROS_INFO("range[405]=%f",scan_in->ranges[405]);
@@ -317,7 +357,11 @@ int main(int argc, char** argv)
 	
 	set_mode(_PI, GPIO_SERVO, PI_OUTPUT);
 	set_mode(_PI, GPIO_ESC, PI_OUTPUT);
-
+	
+	#if defined K2000
+	for(int i(0);i<5;i++){
+	set_mode(_PI, K2000_pins[i], PI_OUTPUT);}
+	#endif
 
 	set_servo_pulsewidth(_PI, GPIO_SERVO, 1500);
 	set_servo_pulsewidth(_PI, GPIO_ESC, 1500);
