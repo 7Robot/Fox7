@@ -58,24 +58,21 @@
 
 		</center>
 	</div>
-	<div id="container2">
-	<center>
-		<div style="width:200px;height:200px;border:1px solid #000;" id="container1">
-
-
-		</div>
-	</center>
-	</div>
-
 	<div id="text_zone">
 		<center>
 
 			 <form>
-				  Kp : <input type="text" name="Kp" id="Kp" maxlenght="4" size="4"><br>
-				  Ki : <input type="text" name="Ki" id="Ki" maxlength="4" size="4"><br>
-					Kd : <input type="text" name="Kd" id="Kd" maxlength="4" size="4"><br>
+				Coeff_1 : <input type="text" name="Kp" id="Kp" maxlenght="4" size="4"><br>
+				Ki : <input type="text" name="Ki" id="Ki" maxlength="4" size="4"><br>
+				Kd : <input type="text" name="Kd" id="Kd" maxlength="4" size="4"><br>
 				  <input type="button" id="submit" value="Submit" >
 			</form>
+			
+			</form>
+                                  Vmax : <input type="text" name="Vmin" id="Vmin" maxlenght="4" size="4"><br>
+                                  Vmin : <input type="text" name="Vmax" id="Vmax" maxlength="4" size="4"><br>
+                                  <input type="button" id="submit_vit" value="Submit_vit" >
+                        </form>
 
 		</center>
 	</div>
@@ -143,7 +140,7 @@
 			control.publish(str_msgs);
 		}
 
-
+/*
 		var cmdVel = new ROSLIB.Topic({
 			ros: ros,
 			name: '/cmd',
@@ -207,7 +204,7 @@
 
 			cmdVel.publish(twist);
 		}, 1 / 30 * 1000);
-
+*/
 
 /********* Definition des Topic *****************/
 		var coeff_asserv_str = new ROSLIB.Topic({
@@ -221,10 +218,6 @@
 			name : '/coeff_asserv_arr',
 			messageType : 'std_msgs/Float32MultiArray'
 		});
-/********** récupération des valeur des coef dans les textBox **************/
-		var Kp = document.getElementById("Kp").value;
-		var Ki = document.getElementById("Ki").value;
-		var Kd = document.getElementById("Kd").value;
 
 /******** Appel de la fonction d'envoie des coef au click sur le bnt 'Submit' ********/
 		document.getElementById("submit").onclick = sendCoef;
@@ -243,6 +236,10 @@
 
 		/**** fonction d'envoi des coef *******/
 		function sendCoef(){
+		/********** récupération des valeur des coef dans les textBox **************/
+	                var Kp = document.getElementById("Kp").value;
+        	        var Ki = document.getElementById("Ki").value;
+                	var Kd = document.getElementById("Kd").value;
 
 
 			/***  on transforme les coef recuperes sous forme de String en un Array de float ***/
@@ -268,6 +265,41 @@
 			coeff_asserv_arr.publish(coef_arr_msgs);
 
 		}
+
+
+/********* Definition des Topic *****************/
+                var Vitesse = new ROSLIB.Topic({
+                        ros : ros,
+                        name : '/Vitesse',
+                        messageType : 'std_msgs/Float32MultiArray'
+                });
+/******** Appel de la fonction d'envoie des coef au click sur le bnt 'Submit' ********/
+                document.getElementById("submit_vit").onclick = sendVit;
+
+
+/**** fonction d'envoi des coef *******/
+
+                function sendVit(){
+
+			/********** récupération des valeur devitesses dans les textBox **************/
+               		 var Vmin = document.getElementById("Vmin").value;
+               		 var Vmax = document.getElementById("Vmax").value;
+
+
+                        /***  on transforme les coef recuperes sous forme de String en un Array de float ***/
+                        var coef_vit = [parseFloat(Vmin) , parseFloat(Vmax)];
+
+                        console.log(coef_vit);
+
+                        /*** creation des messages sous les deux formes (String et Array) ******/
+                        var coef_arr_vit = new ROSLIB.Message({
+                                data: coef_vit
+                        });
+
+                        /**** envoi des messages ******/
+                        Vitesse.publish(coef_arr_vit);
+
+                }
 
 	</script>
 

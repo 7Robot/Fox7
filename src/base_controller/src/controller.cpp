@@ -7,12 +7,16 @@
 #include <cmath>
 #include "constantes.hpp"
 
-#define VITESSE_MAXIMUM 0.8
-#define VITESSE_MINIMUM 0.5
+#include <std_msgs/MultiArrayLayout.h>
+#include <std_msgs/MultiArrayDimension.h>
+#include <std_msgs/Float32MultiArray.h>
+
+#define VITESSE_MAXIMUM 0.7
+#define VITESSE_MINIMUM 0.3
 
 // Definition de l'aglorithme utilisé, choisir :
 // ALGO_RECTANGLE, ALGO_OBSTACLE ou ALGO_PROFIL
-#define ALGO_PROFIL
+#define ALGO_RECTANGLE
 
 #if defined ALGO_RECTANGLE
 	#include "algo_rectangle.hpp"
@@ -40,7 +44,12 @@ int n=405;
 // Coef d'asserv en direction
 float Kp=1;
 float Ki=0;
-float Kd=0;
+float Kd=-0.035;
+float coeff_1=0;
+float coeff_2=0;
+float coeff_3=0;
+float Vmin=0.3;
+float Vmax=0.5;
 
 // Coef commande vitesse
 const float a=(CMD_SPEED_MIN-CMD_SPEED_MAX)/(pow(DISTANCE_MAX-DISTANCE_MIN,2));
@@ -60,7 +69,7 @@ public:
 		if(dt.toSec()==0)
 			return 0;
 
-		m_error = m_consigne - angle_dist_max;
+		m_error = angle_dist_max;
 
 		m_derivee = m_error - m_previous_error;
 		m_previous_error = m_error;
@@ -132,7 +141,7 @@ public:
 			//if(!m_arret_urgence||1)
 		//	if (1)
 		//	{
-			//	m_cmd_angle = asservDirection(m_consigne_angle, m_dt);
+		//		m_cmd_angle = asservDirection(m_consigne_angle, m_dt);
 			//	m_cmd_speed = commandSpeed(m_dist_max);
 
 			//	setDirection(m_cmd_angle);
@@ -145,14 +154,39 @@ public:
 		//{
 		//	ROS_INFO("ranges[%d]=%f", n, scan_in->ranges[n]);
 		//}
-		setDirection(m_consigne_angle);
-		
-		float vitesse_actuelle;
-		
-		vitesse_actuelle=VITESSE_MAXIMUM-(abs(m_consigne_angle)/CMD_ANGLE_MAX)*(VITESSE_MAXIMUM-VITESSE_MINIMUM);
-		ROS_INFO("Vitesse = %f",vitesse_actuelle);
 
-		setSpeed(vitesse_actuelle);
+
+		
+		float m_dist_devant=scan_in->ranges[405];
+		float vitesse_actuelle;
+		float coeff;
+	
+		/*if(m_dist_devant<coeff_1 || abs(m_consigne_angle)>35*PI/180)
+		{
+			vitesse_actuelle=Vmin;
+		}
+		else
+		{
+			if(m_dist_devant>3)
+				m_dist_devant=3;
+			vitesse_actuelle=Vmax - (Vmax-Vmin)*3/(m_dist_devant);
+		}
+		ROS_INFO("Vitesse = %f",vitesse_actuelle);*/
+
+			
+
+		if (m_dist_devant<0.8)
+		{
+			coeff=1;
+		}
+		else
+		{
+			coeff=1/((0.2+m_dist_devant));
+		}
+		m_consigne_angle=coeff*m_consigne_angle;
+
+		setDirection(m_consigne_angle);
+		setSpeed(Vmax);
 	}
 
 	void runON() {m_run=true;}
@@ -253,6 +287,17 @@ void n_callback(const std_msgs::Int32::ConstPtr &msg)
 {
 	n=msg->data;
 }
+void coeff_callback(const std_msgs::Float32MultiArray::ConstPtr &msg)
+{
+	coeff_1 = msg->data[0];
+	coeff_2 = msg->data[1];
+	coeff_3 = msg->data[2];
+}
+void vit_callback(const std_msgs::Float32MultiArray::ConstPtr &msg)
+{
+        Vmax = msg->data[0];
+        Vmin = msg->data[1];
+}
 
 int main(int argc, char** argv)
 {
@@ -282,7 +327,9 @@ int main(int argc, char** argv)
 	ros::Subscriber sub = n.subscribe("scan", 1000, &CmdCallback::callback, &cmd_callback);
 	ros::Subscriber sub2 = n.subscribe("control", 10, control_callback);
 	ros::Subscriber sub3 = n.subscribe("n", 10, n_callback);
-	
+	ros::Subscriber sub4 = n.subscribe("coeff_asserv_arr", 10, coeff_callback);
+	ros::Subscriber sub5 = n.subscribe("Vitesse", 10, vit_callback);
+
 	
 	ros::spin();
 

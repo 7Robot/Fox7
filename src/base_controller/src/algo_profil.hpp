@@ -3,12 +3,22 @@
 #include <ros/ros.h>
 #include <laser_geometry/laser_geometry.h>
 
+#include "std_msgs/MultiArrayLayout.h"
+#include "std_msgs/MultiArrayDimension.h"
+ 
+#include "std_msgs/Float32MultiArray.h"
+
+
 #include "constantes.hpp"
 
 #define INDICE_45 136
 #define DIST_MIN 0.1
-#define DIST_MAX 3
+#define DIST_MAX 5
 #define DETECT_LIGNEDROITE 50
+
+#define DIST_MAX_ARRIV 3
+#define PERCENT_ARRIV 0.2
+
 
 float marge_erreur(1.5);
 
@@ -38,12 +48,23 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 	{
 		consigne_angle = (somme/Compt-INDICE_CENTRE)*scan_in->angle_increment;// moyenne des indices par l'increment pour retrouver une consigne d'angle
 		
-		ROS_INFO("ligne droite");
+		//ROS_INFO("ligne droite");
 		return consigne_angle;
 	}
 
+	// DETECT LIGNE POUR ARRIVE
+	float compt(0);
+	for (int i(Range_min);i<= Range_max;i++)
+	{
+		if(scan_in->ranges[i] == 0 || scan_in->ranges[i] >= DIST_MAX_ARRIV)
+		{	compt+=1;}
+	}
+	if(compt/INDICE_45/2 > PERCENT_ARRIV)
+	{ROS_INFO("\n##LIGNE DROITE#\n#");}
+	else{ROS_INFO("\n##VIRAGE##\n");}
+
 	
-	ROS_INFO("Virage");
+	//ROS_INFO("Virage");
 
 	/***** Recherche des min ******/
 	float maxDRect = 0;
@@ -66,7 +87,7 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 		}
 
 			minDRect = ranges_i;
-			for(int j = (i-INDICE_45); j<=( i + INDICE_45); j++)
+			for(int j = (i-INDICE_45+100); j<=( i + INDICE_45+100); j++)
 			{
 				if(i==j)
 				{
