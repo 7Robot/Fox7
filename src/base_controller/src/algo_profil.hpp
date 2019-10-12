@@ -5,7 +5,7 @@
 
 #include "std_msgs/MultiArrayLayout.h"
 #include "std_msgs/MultiArrayDimension.h"
- 
+
 #include "std_msgs/Float32MultiArray.h"
 
 
@@ -27,7 +27,7 @@ float dRect(float angle)
 	return (LARGEUR_VOITURE*marge_erreur/2/sin(angle));
 }
 
-float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
+float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in, ros::Publisher rect_pub)
 {
 	float consigne_angle = 0; // [rad]
 	int Range_min = INDICE_CENTRE-INDICE_45;
@@ -47,7 +47,7 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 	if(Compt>DETECT_LIGNEDROITE)
 	{
 		consigne_angle = (somme/Compt-INDICE_CENTRE)*scan_in->angle_increment;// moyenne des indices par l'increment pour retrouver une consigne d'angle
-		
+
 		//ROS_INFO("ligne droite");
 		return consigne_angle;
 	}
@@ -63,7 +63,7 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 	{ROS_INFO("\n##LIGNE DROITE#\n#");}
 	else{ROS_INFO("\n##VIRAGE##\n");}
 
-	
+
 	//ROS_INFO("Virage");
 
 	/***** Recherche des min ******/
@@ -95,7 +95,7 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 				}
 
 
-				// On normalise entre la dist max et la dist min 
+				// On normalise entre la dist max et la dist min
 
 
 				float ranges_j;
@@ -108,7 +108,7 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 					ranges_j = scan_in->ranges[j];
 				}
 
-				// On regarde la projection du robot dans la direction 
+				// On regarde la projection du robot dans la direction
 				if(ranges_j < dRect(fabs(i-j)*scan_in->angle_increment))
 				{
 					if(minDRect>ranges_j)
@@ -126,5 +126,10 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 	}
 
 	consigne_angle = (i_maxDRect-INDICE_CENTRE)*scan_in->angle_increment;
+
+  std_msgs::Float32MultiArray msgs_rect;
+  msgs_rect.data = {consigne_angle, maxDRect};
+
+  rect_pub.publish(msgs_rect);
 	return consigne_angle;
 }
