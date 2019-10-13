@@ -165,7 +165,7 @@ class CmdCallback
 public:
 	CmdCallback(ros::NodeHandle n) :m_dt(0),m_run(false), m_arret_urgence(false), m_compteur_urgence(0), asservDirection(), m_n(n)
 	{
-		ros::Publisher rect_pub = m_n.advertise<std_msgs::Float32MultiArray>("rectangle", 10);
+		rect_pub = m_n.advertise<std_msgs::Float32MultiArray>("rectangle", 10);
 	}
 
 	void callback(const sensor_msgs::LaserScan::ConstPtr& scan_in)

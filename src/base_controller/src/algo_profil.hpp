@@ -48,7 +48,11 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in, ros::Pub
 	{
 		consigne_angle = (somme/Compt-INDICE_CENTRE)*scan_in->angle_increment;// moyenne des indices par l'increment pour retrouver une consigne d'angle
 
-		//ROS_INFO("ligne droite");
+
+		  std_msgs::Float32MultiArray msgs_rect;
+		  msgs_rect.data = {consigne_angle, DIST_MAX};
+		  rect_pub.publish(msgs_rect);
+	//	ROS_INFO("theta1 %f",consigne_angle);
 		return consigne_angle;
 	}
 
@@ -129,7 +133,7 @@ float commandDirection(const sensor_msgs::LaserScan::ConstPtr& scan_in, ros::Pub
 
   std_msgs::Float32MultiArray msgs_rect;
   msgs_rect.data = {consigne_angle, maxDRect};
-
   rect_pub.publish(msgs_rect);
+//	ROS_INFO("theta2 %f",consigne_angle);
 	return consigne_angle;
 }
